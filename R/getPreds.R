@@ -15,7 +15,8 @@
 #' @export getPreds
 
 getPreds <- function(
-  modObj,
+  beta,
+  varcov,
   scen,
   link='logit',
   seed=6886, sims=100
@@ -23,7 +24,7 @@ getPreds <- function(
 
   # set seed and obtain draws from model object
   set.seed(seed)
-  draws = mvtnorm::rmvnorm(sims, coef(modObj), vcov(modObj))
+  draws = mvtnorm::rmvnorm(sims, beta, varcov)
 
   # get predictions and apply link function
   preds = lapply(scen$scen, function(s){
