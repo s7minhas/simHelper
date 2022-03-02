@@ -106,7 +106,8 @@ scenBuild <- function(
   if(scenType=='observed'){
 
     # get unique of observed data
-    bScen = unique(mData)
+    # bScen = unique(mData)
+    bScen = mData
 
     # repeat for every value of treatment
     scen = lapply(1:nrow(treatCombo), function(ii){

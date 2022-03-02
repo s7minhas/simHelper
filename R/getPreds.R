@@ -36,6 +36,8 @@ getPreds <- function(
       preds = 1/(1+exp(-xBeta)) }
     if(link=='probit'){
       preds = pnorm(xBeta) }
+    if(link=='normal'){
+      preds = xBeta }
 
     #
     return(preds) })
