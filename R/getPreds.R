@@ -39,6 +39,8 @@ getPreds <- function(
       preds = pnorm(xBeta) }
     if(link=='normal'){
       preds = xBeta }
+    if(link=='poisson' | link=='nbinom' ){
+      preds = exp(xBeta) }
 
     #
     return(preds) })
