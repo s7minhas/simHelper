@@ -14,53 +14,40 @@
 #'
 #' @export getPreds
 
-getPreds <- function(
-  modObj,
-  scen,
-  link='logit',
-  seed=6886, sims=100
-){
-
-  # set seed and obtain draws from model object
-  set.seed(seed)
-  draws = mvtnorm::rmvnorm(sims, coef(modObj), vcov(modObj))
-
-  # get predictions and apply link function
-  preds = lapply(scen$scen, function(s){
-
-    # calc xbeta
-    xBeta = draws %*% t(s)
-
-    # apply link
-    if(link=='logit'){
-      preds = 1/(1+exp(-xBeta)) }
-    if(link=='probit'){
-      preds = pnorm(xBeta) }
-
-    #
-    return(preds) })
-
-  # if observed value approach used get average of predictions
-  if(scen$scenType=='observed'){
-    preds = lapply(preds, function(pred){
-      avgPred = matrix(apply(pred, 1, mean), ncol=1)
-      return(avgPred) }) }
-
-  # add treatment variable info
-  preds = lapply(1:nrow(scen$treatCombo), function(ii){
-    predT = preds[[ii]]
-    tVals = scen$treatCombo[ii,,drop=FALSE]
-    rownames(tVals) = NULL
-    predT = cbind(tVals, pred = predT)
-    return(predT) })
-
-  # reorg
-  preds = do.call('rbind', preds)
-  names(preds)[ncol(preds)] = 'pred'
-
-  #
-  return(preds)
-}
+getPreds = function(
+  beta, varcov, scen,
+  link = "count", seed = 6886, sims = 100) {
+    set.seed(seed)
+    draws = mvtnorm::rmvnorm(sims, beta, varcov)
+    preds = lapply(scen$scen, function(s) {
+        xBeta = draws %*% t(s)
+        if (link == "logit") {
+            preds = 1/(1 + exp(-xBeta))
+        }
+        if (link == "probit") {
+            preds = pnorm(xBeta)
+        }
+				if (link == 'count') {
+					preds = exp(xBeta)
+				}
+        return(preds)
+    })
+    if (scen$scenType == "observed") {
+        preds = lapply(preds, function(pred) {
+            avgPred = matrix(apply(pred, 1, mean), ncol = 1)
+            return(avgPred)
+        })
+    }
+    preds = lapply(1:nrow(scen$treatCombo), function(ii) {
+        predT = preds[[ii]]
+        tVals = scen$treatCombo[ii, , drop = FALSE]
+        rownames(tVals) = NULL
+        predT = cbind(tVals, pred = predT)
+        return(predT)
+    })
+    preds = do.call("rbind", preds)
+    names(preds)[ncol(preds)] = "pred"
+    return(preds) }
 
 # #####
 # library(simHelper)
