@@ -44,6 +44,7 @@ scenBuild <- function(
   ivs,
   scenType='hypothetical',
   ivStats=rep('median',length(ivs)),
+  ivValues=NULL,
   treatVar,
   treatCategorical=TRUE,
   treatVals=NULL,
@@ -101,6 +102,25 @@ scenBuild <- function(
         dimnames=list(rownames(bScen), colnames(bScen)) )
       return(out) })
   } # end hypothetical scenario construction
+
+  # create scenario based on inputted values
+  if(scenType=='counterfactual'){
+
+    # find vars to add
+    toAdd = setdiff(ivs, treatVar)
+
+    # create scen base
+    scen = treatCombo
+
+    # add values from ivValues
+    for(add in toAdd){
+      scen = cbind(scen, ivValues[[add]])
+      names(scen)[ncol(scen)] = add
+    }
+
+    # convert to list
+    scen = lapply(1:nrow(scen), function(ii){ scen[ii,,drop=FALSE] })
+  }
 
   # create scenario based on observed value approach
   if(scenType=='observed'){

@@ -15,7 +15,9 @@
 #' @export getPreds
 
 getPreds <- function(
-  modObj,
+  modObj=NULL,
+  beta=NULL,
+  varcov=NULL,
   scen,
   link='logit',
   seed=6886, sims=100
@@ -23,10 +25,18 @@ getPreds <- function(
 
   # set seed and obtain draws from model object
   set.seed(seed)
-  draws = mvtnorm::rmvnorm(sims, coef(modObj), vcov(modObj))
+  if(is.null(beta) & is.null(vcov)){
+    draws = mvtnorm::rmvnorm(sims, coef(modObj), vcov(modObj)) }
+  if(!is.null(beta) & !is.null(vcov)){
+    draws = mvtnorm::rmvnorm(sims, beta, varcov) }
 
   # get predictions and apply link function
   preds = lapply(scen$scen, function(s){
+
+    # rearrange cols to be in the same order
+    if( 'intercept' %in% colnames(s) ){
+      s[,2:ncol(s)] = s[,colnames(draws)[-1]]
+    } else { s = s[,colnames(draws)] }
 
     # calc xbeta
     xBeta = draws %*% t(s)
@@ -36,6 +46,10 @@ getPreds <- function(
       preds = 1/(1+exp(-xBeta)) }
     if(link=='probit'){
       preds = pnorm(xBeta) }
+    if(link=='count'){
+      preds = exp(xBeta) }
+    if(link=='normal'){
+      preds = xBeta }
 
     #
     return(preds) })
