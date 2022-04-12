@@ -4,14 +4,26 @@
 \alias{getPreds}
 \title{Calculate predictions using scenario accounting for estimation uncertainty}
 \usage{
-getPreds(modObj, scen, link = "logit", seed = 6886, sims = 100)
+getPreds(
+  modObj = NULL,
+  beta = NULL,
+  varcov = NULL,
+  scen,
+  link = "binary-logit",
+  seed = 6886,
+  sims = 100
+)
 }
 \arguments{
-\item{modObj}{model object (glm or lm)}
+\item{modObj}{model object (glm or lm), it's recommended to just supply values to beta and varcov}
+
+\item{beta}{vector of regression estimates, usually obtained from coef of the model object}
+
+\item{varcov}{variance covariance matrix}
 
 \item{scen}{scenario object generated from scenBuild}
 
-\item{link}{link function, options include: logit, probit (we'll build more in as we go)}
+\item{link}{link function, options include: binary-logit, binary-probit, count, normal}
 }
 \value{
 a data.frame object that includes columns for each of the treatment values

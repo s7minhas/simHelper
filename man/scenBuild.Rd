@@ -9,6 +9,7 @@ scenBuild(
   ivs,
   scenType = "hypothetical",
   ivStats = rep("median", length(ivs)),
+  ivValues = NULL,
   treatVar,
   treatCategorical = TRUE,
   treatVals = NULL,
@@ -20,9 +21,11 @@ scenBuild(
 
 \item{ivs}{character vector with all independent variables to be used}
 
-\item{scenType}{type of scenario to construct: observed value approach or hypothetical}
+\item{scenType}{type of scenario to construct: observed value approach, hypothetical, or counterfactual. if using counterfactual then you must supply values for each iv to ivValues in a named list}
 
 \item{ivStats}{if hypothetical chosen then you have the option of specifying the summary stats to use}
+
+\item{ivValues}{a named list where the names should exactly match variables in the mData input and values should be those that you wish to generate a prediction for}
 
 \item{treatVar}{character vector indicating the treatment or treatments to be used}
 
