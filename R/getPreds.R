@@ -16,93 +16,6 @@
 #'
 #' @export getPreds
 
-############
-library(simHelper)
-data(anes)
-library(MASS)
-
-set.seed(6886)
-
-# make sure R reads dv as ordered factor
-anes$obamaLR2 = as.ordered(anes$obamaLR2)
-
-# set up model spec
-dv = 'obamaLR2'
-ivs = c('pid', 'age', 'education', 'income', 'white')
-form = paste0(dv, '~', paste(ivs, collapse='+'))
-
-# run model
-ordMod <- polr( form, data=anes, method="logistic", Hess=T)
-
-beta <- coef(ordMod)
-tau <- ordMod$zeta
-
-scen = scenBuild(
-	anes,
-	ivs = ivs,
-	scenType = 'observed',
-	# ivValues = list(age=30, education=4, white=1),
-	treatVar = 'pid',
-	treatCategorical=FALSE,
-	intercept=FALSE
-)
-
-head(do.call('rbind', scen$scen))
-
-seed=6886
-sims=100
-beta = c(beta, tau)
-varcov = solve(ordMod$Hessian)
-link = 'ordinal-logit'
-
-draws = mvtnorm::rmvnorm(sims, beta, varcov)
-
-s = scen$scen[[1]]
-
-head(s)
-
-# if ordinal-logit or ordinal-probit
-s = s[,intersect(colnames(draws), colnames(s))]
-
-# skip if ordinal-logit or ordinal-probit
-# rearrange cols to be in the same order
-# if( 'intercept' %in% colnames(s) ){
-#   s[,2:ncol(s)] = s[,colnames(draws)[-1]]
-# } else { s = s[,colnames(draws)] }
-
-# organize results from draws
-betas = draws[,1:ncol(s)]
-taus = draws[,(ncol(s)+1):ncol(draws)]
-
-# calculate prob of lowest cat
-probs = lapply(1:ncol(taus), function(ii){
-
-	# get prob of lowest cat
-	if(ii == 1) {
-		prob = plogis( taus[,ii] - betas%*%t(s) )
-		return(prob) }
-
-	# get prob of middle cats
-	if(ii != 1) {
-		prob = plogis(taus[,ii]-betas%*%t(s)) - plogis(taus[,ii-1]-betas%*%t(s))
-		return(prob) }
-})
-
-#
-probs = do.call('cbind', probs)
-probs = cbind(probs, apply(probs, 1, function(x){ 1-sum(x) }) )
-head(probs)
-
-
-# same procedure as above but using draws to incorp uncertainty
-probLib = plogis(taus[,1] - betas %*% t(s))
-probMod = plogis(taus[,2] - betas %*% t(s)) - plogis(taus[,1] - betas %*% t(s))
-probCon = 1 - plogis(taus[,2] - betas %*% t(s))
-
-head(cbind(probLib, probMod, probCon))
-############
-
-
 getPreds <- function(
   modObj=NULL,
   beta=NULL,
@@ -147,7 +60,7 @@ getPreds <- function(
 		if(grepl('ordinal', link)){
 
 			# rearrange cols to be in the same order
-			s = s[,intersect(colnames(draws), colnames(s))]
+			s = s[,intersect(colnames(draws), colnames(s)),drop=FALSE]
 
 			# organize results from draws
 			betas = draws[,1:ncol(s)]
@@ -172,6 +85,11 @@ getPreds <- function(
 					pred = pred1 - pred0
 					return(pred) } })
 
+			# if observed vals then avg here
+			if(scen$scenType=='observed'){
+				preds = lapply(preds, function(predCat){
+					matrix(apply(predCat, 1, mean), ncol=1) }) }
+
 			# organize and get preds for final cat
 			preds = do.call('cbind', preds)
 			preds = cbind(preds, apply(preds, 1, function(x){ 1-sum(x) }) )
@@ -182,7 +100,7 @@ getPreds <- function(
     return(preds) })
 
   # if observed value approach used get average of predictions
-  if(scen$scenType=='observed'){
+  if(scen$scenType=='observed' & !grepl('ordinal', link)){
     preds = lapply(preds, function(pred){
       avgPred = matrix(apply(pred, 1, mean), ncol=1)
       return(avgPred) }) }
@@ -292,3 +210,62 @@ getPreds <- function(
 #   geom_line() +
 #   geom_ribbon(aes(ymin=lo, ymax=hi), alpha=.3)
 # #####
+
+# ############
+# library(simHelper)
+# data(anes)
+# library(MASS)
+#
+# set.seed(6886)
+#
+# # make sure R reads dv as ordered factor
+# anes$obamaLR2 = as.ordered(anes$obamaLR2)
+#
+# # set up model spec
+# dv = 'obamaLR2'
+# ivs = c('pid', 'age', 'education', 'income', 'white')
+# form = paste0(dv, '~', paste(ivs, collapse='+'))
+#
+# # run model
+# ordMod <- polr( form, data=anes, method="logistic", Hess=T)
+#
+# scen = scenBuild(
+# 	anes,
+# 	ivs = ivs,
+# 	scenType = 'observed',
+# 	# ivValues = list(age=30, education=4, white=1),
+# 	treatVar = 'pid',
+# 	treatCategorical=FALSE,
+# 	intercept=FALSE
+# )
+#
+# ordPreds = getPreds(
+# 	beta=c(coef(ordMod), ordMod$zeta),
+# 	varcov=solve(ordMod$Hessian),
+# 	scen=scen,
+# 	link='ordinal-logit',
+# 	seed=6886, sims=100
+# )
+#
+# head(ordPreds)
+#
+# scen2 = scenBuild(
+# 	anes,
+# 	ivs = ivs,
+# 	scenType = 'hypothetical',
+# 	# ivValues = list(age=30, education=4, white=1),
+# 	treatVar = 'pid',
+# 	treatCategorical=FALSE,
+# 	intercept=FALSE
+# )
+#
+# ordPreds2 = getPreds(
+# 	beta=c(coef(ordMod), ordMod$zeta),
+# 	varcov=solve(ordMod$Hessian),
+# 	scen=scen2,
+# 	link='ordinal-logit',
+# 	seed=6886, sims=100
+# )
+#
+# dim(ordPreds)
+# dim(ordPreds2)
